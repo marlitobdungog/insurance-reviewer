@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, ArrowRight, Shield, Building2, Landmark } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // In a real app, we would validate credentials here
+    navigate('/start');
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -35,7 +42,7 @@ export const LoginPage: React.FC = () => {
             <p className="text-slate-500">Sign in to continue your license practice</p>
           </div>
 
-          <form className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">Email Address</label>
               <input 
@@ -77,7 +84,7 @@ export const LoginPage: React.FC = () => {
               </label>
             </div>
 
-            <button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-orange-600/20 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
+            <button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-orange-600/20 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
               Sign In
               <ArrowRight size={20} />
             </button>
