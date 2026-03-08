@@ -9,12 +9,14 @@ import { AdminPage } from './pages/AdminPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ExamStartPage } from './pages/ExamStartPage';
+import { AgentDashboardPage } from './pages/AgentDashboardPage';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LoginPage />} />
+        <Route path="/dashboard" element={<AgentDashboardPage />} />
         <Route path="/start" element={<ExamStartPage />} />
         <Route path="/quiz" element={<QuizPage />} />
         <Route path="/admin" element={<AdminPage />} />

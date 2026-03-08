@@ -9,7 +9,7 @@ export const LoginPage: React.FC = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // In a real app, we would validate credentials here
-    navigate('/start');
+    navigate('/dashboard');
   };
 
   return (
