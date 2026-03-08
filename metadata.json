@@ -1,0 +1,5 @@
+{
+  "name": "Insurance License Exam",
+  "description": "A practice exam interface for insurance agent licensing with immediate feedback and progress tracking.",
+  "requestFramePermissions": []
+}
