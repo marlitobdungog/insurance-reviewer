@@ -6,15 +6,21 @@ import { Question, Option } from '../data/questions';
 interface QuestionEditorProps {
   question: Question | null;
   isOpen: boolean;
+  isSaving?: boolean;
+  isDeleting?: boolean;
   onClose: () => void;
   onSave: (question: Question) => void;
+  onDelete: (questionId: number) => void;
 }
 
 export const QuestionEditor: React.FC<QuestionEditorProps> = ({ 
   question, 
   isOpen, 
+  isSaving = false,
+  isDeleting = false,
   onClose, 
-  onSave 
+  onSave,
+  onDelete,
 }) => {
   const [formData, setFormData] = useState<Question>({
     id: 0,
@@ -28,9 +34,8 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
     if (question) {
       setFormData(JSON.parse(JSON.stringify(question))); // Deep copy
     } else {
-      // Reset for new question
       setFormData({
-        id: Date.now(), // Temporary ID
+        id: 0,
         domain: '',
         text: '',
         type: 'MULTIPLE CHOICE',
@@ -43,6 +48,43 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
       });
     }
   }, [question, isOpen]);
+
+  const handleTypeChange = (value: Question['type']) => {
+    if (value === 'TRUE/FALSE') {
+      setFormData({
+        ...formData,
+        type: value,
+        options: [
+          {
+            id: 'A',
+            text: formData.options[0]?.text || 'True',
+            isCorrect: formData.options[0]?.isCorrect ?? true,
+            explanation: formData.options[0]?.explanation || '',
+          },
+          {
+            id: 'B',
+            text: formData.options[1]?.text || 'False',
+            isCorrect: formData.options[1]?.isCorrect ?? false,
+            explanation: formData.options[1]?.explanation || '',
+          },
+        ],
+      });
+      return;
+    }
+
+    setFormData({
+      ...formData,
+      type: value,
+      options:
+        formData.options.length >= 4
+          ? formData.options.map((option, index) => ({ ...option, id: String.fromCharCode(65 + index) }))
+          : [
+              ...formData.options.map((option, index) => ({ ...option, id: String.fromCharCode(65 + index) })),
+              { id: 'C', text: '', isCorrect: false, explanation: '' },
+              { id: 'D', text: '', isCorrect: false, explanation: '' },
+            ],
+    });
+  };
 
   const handleOptionChange = (index: number, field: keyof Option, value: any) => {
     const newOptions = [...formData.options];
@@ -131,7 +173,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                       <label className="text-xs font-semibold text-slate-500 uppercase">Type</label>
                       <select
                         value={formData.type}
-                        onChange={(e) => setFormData({...formData, type: e.target.value as any})}
+                        onChange={(e) => handleTypeChange(e.target.value as Question['type'])}
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all bg-white"
                       >
                         <option value="MULTIPLE CHOICE">Multiple Choice</option>
@@ -239,10 +281,12 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
             <div className="p-6 border-t border-slate-200 bg-white flex justify-between items-center">
               <button 
                 type="button"
+                onClick={() => question && onDelete(question.id)}
+                disabled={!question || isDeleting}
                 className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm"
               >
                 <Trash2 size={18} />
-                Delete Question
+                {isDeleting ? 'Deleting...' : 'Delete Question'}
               </button>
               <div className="flex gap-3">
                 <button 
@@ -255,10 +299,11 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 <button 
                   type="submit"
                   form="question-form"
+                  disabled={isSaving}
                   className="px-6 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-2"
                 >
                   <Save size={18} />
-                  Save Changes
+                  {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </div>

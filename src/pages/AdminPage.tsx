@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -10,63 +10,58 @@ import {
   MoreVertical,
   Filter
 } from 'lucide-react';
-import { sampleQuestion, Question } from '../data/questions';
+import { Question } from '../data/questions';
 import { QuestionEditor } from '../components/QuestionEditor';
 
-// Mock data with full structure
-const mockQuestions: Question[] = [
-  sampleQuestion,
-  {
-    id: 16,
-    domain: "Contract Law",
-    text: "Which of the following best describes a contract of adhesion?",
-    type: "MULTIPLE CHOICE",
-    options: [
-      { id: "A", text: "A contract negotiated between two equal parties.", isCorrect: false, explanation: "Incorrect." },
-      { id: "B", text: "A contract prepared by one party and submitted to the other on a take-it-or-leave-it basis.", isCorrect: true, explanation: "Correct!" },
-      { id: "C", text: "A contract that can be cancelled at any time.", isCorrect: false, explanation: "Incorrect." },
-      { id: "D", text: "A contract involving illegal activities.", isCorrect: false, explanation: "Incorrect." }
-    ]
-  },
-  {
-    id: 17,
-    domain: "Financial Regs",
-    text: "An insurer is considered solvent if it has enough assets to cover its liabilities and reinsurance.",
-    type: "TRUE/FALSE",
-    options: [
-      { id: "A", text: "True", isCorrect: true, explanation: "Correct!" },
-      { id: "B", text: "False", isCorrect: false, explanation: "Incorrect." }
-    ]
-  },
-  {
-    id: 18,
-    domain: "State Law",
-    text: "What is the maximum penalty for a willful violation of the Insurance Code?",
-    type: "MULTIPLE CHOICE",
-    options: [
-      { id: "A", text: "$1,000", isCorrect: false, explanation: "Incorrect." },
-      { id: "B", text: "$5,000", isCorrect: false, explanation: "Incorrect." },
-      { id: "C", text: "$10,000", isCorrect: false, explanation: "Incorrect." },
-      { id: "D", text: "$25,000", isCorrect: true, explanation: "Correct!" }
-    ]
-  },
-  {
-    id: 19,
-    domain: "General Insurance",
-    text: "Risk retention groups are primarily formed to provide which type of insurance?",
-    type: "MULTIPLE CHOICE",
-    options: [
-      { id: "A", text: "Life Insurance", isCorrect: false, explanation: "Incorrect." },
-      { id: "B", text: "Liability Insurance", isCorrect: true, explanation: "Correct!" },
-      { id: "C", text: "Health Insurance", isCorrect: false, explanation: "Incorrect." },
-      { id: "D", text: "Property Insurance", isCorrect: false, explanation: "Incorrect." }
-    ]
-  }
-];
-
 export const AdminPage: React.FC = () => {
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const fetchQuestions = async () => {
+    try {
+      setLoadError('');
+      setIsLoading(true);
+      const response = await fetch('/api/questions');
+      if (!response.ok) {
+        throw new Error('Failed to fetch questions');
+      }
+
+      const data = await response.json();
+      setQuestions(Array.isArray(data.questions) ? data.questions : []);
+    } catch (error) {
+      console.error(error);
+      setLoadError('Failed to load questions');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuestions();
+  }, []);
+
+  const filteredQuestions = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) {
+      return questions;
+    }
+
+    return questions.filter((question) => {
+      return (
+        question.text.toLowerCase().includes(query) ||
+        question.domain.toLowerCase().includes(query) ||
+        String(question.id).includes(query)
+      );
+    });
+  }, [questions, searchTerm]);
+
+  const domainCount = new Set(questions.map((question) => question.domain)).size;
 
   const handleEditQuestion = (question: Question) => {
     setSelectedQuestion(question);
@@ -78,10 +73,70 @@ export const AdminPage: React.FC = () => {
     setIsEditorOpen(true);
   };
 
-  const handleSaveQuestion = (updatedQuestion: Question) => {
-    console.log("Saving question:", updatedQuestion);
-    // In a real app, update the list here
-    setIsEditorOpen(false);
+  const handleSaveQuestion = async (updatedQuestion: Question) => {
+    try {
+      setIsSaving(true);
+
+      const isEditing = selectedQuestion !== null;
+      const endpoint = isEditing ? `/api/questions/${selectedQuestion.id}` : '/api/questions';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedQuestion),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save question');
+      }
+
+      setQuestions((currentQuestions) => {
+        if (isEditing) {
+          return currentQuestions.map((question) =>
+            question.id === data.id ? data : question
+          );
+        }
+
+        return [...currentQuestions, data].sort((left, right) => left.id - right.id);
+      });
+
+      setIsEditorOpen(false);
+      setSelectedQuestion(null);
+    } catch (error) {
+      console.error(error);
+      window.alert(error instanceof Error ? error.message : 'Failed to save question');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteQuestion = async (questionId: number) => {
+    try {
+      setIsDeleting(true);
+      const response = await fetch(`/api/questions/${questionId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete question');
+      }
+
+      setQuestions((currentQuestions) =>
+        currentQuestions.filter((question) => question.id !== questionId)
+      );
+      setIsEditorOpen(false);
+      setSelectedQuestion(null);
+    } catch (error) {
+      console.error(error);
+      window.alert(error instanceof Error ? error.message : 'Failed to delete question');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -127,9 +182,9 @@ export const AdminPage: React.FC = () => {
         <div className="p-8 max-w-7xl mx-auto">
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <StatCard label="Total Questions" value="1,240" change="+12 this week" />
-            <StatCard label="Active Domains" value="8" change="Stable" />
-            <StatCard label="Pending Review" value="14" change="Requires attention" urgent />
+            <StatCard label="Total Questions" value={String(questions.length)} change="Live from database" />
+            <StatCard label="Active Domains" value={String(domainCount)} change="Based on current bank" />
+            <StatCard label="Search Results" value={String(filteredQuestions.length)} change={searchTerm ? 'Filtered view' : 'All questions shown'} urgent={Boolean(searchTerm)} />
           </div>
 
           {/* Action Bar */}
@@ -139,6 +194,8 @@ export const AdminPage: React.FC = () => {
               <input 
                 type="text" 
                 placeholder="Search questions..." 
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
             </div>
@@ -170,7 +227,19 @@ export const AdminPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {mockQuestions.map((q) => (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-10 text-center text-slate-500">Loading questions...</td>
+                  </tr>
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-10 text-center text-red-600">{loadError}</td>
+                  </tr>
+                ) : filteredQuestions.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-10 text-center text-slate-500">No questions found.</td>
+                  </tr>
+                ) : filteredQuestions.map((q) => (
                   <TableRow 
                     key={q.id}
                     question={q}
@@ -182,10 +251,9 @@ export const AdminPage: React.FC = () => {
             
             {/* Pagination */}
             <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between text-sm text-slate-500">
-              <span>Showing 1-5 of 1,240 questions</span>
+              <span>Showing {filteredQuestions.length} of {questions.length} questions</span>
               <div className="flex gap-2">
-                <button className="px-3 py-1 border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-50">Prev</button>
-                <button className="px-3 py-1 border border-slate-200 rounded hover:bg-slate-50">Next</button>
+                <button onClick={fetchQuestions} className="px-3 py-1 border border-slate-200 rounded hover:bg-slate-50">Refresh</button>
               </div>
             </div>
           </div>
@@ -195,8 +263,11 @@ export const AdminPage: React.FC = () => {
       <QuestionEditor 
         isOpen={isEditorOpen}
         question={selectedQuestion}
+        isSaving={isSaving}
+        isDeleting={isDeleting}
         onClose={() => setIsEditorOpen(false)}
         onSave={handleSaveQuestion}
+        onDelete={handleDeleteQuestion}
       />
     </div>
   );

@@ -6,17 +6,17 @@ import { motion } from 'motion/react';
 
 interface QuestionCardProps {
   question: Question;
+  onNext: () => void;
+  hasNextQuestion: boolean;
 }
 
-export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
-  const [selectedOptionId, setSelectedOptionId] = useState<string | null>("B"); // Pre-selecting B to match design for demo
-  const [isSubmitted, setIsSubmitted] = useState(true); // Pre-submitted to match design
+export const QuestionCard: React.FC<QuestionCardProps> = ({ question, onNext, hasNextQuestion }) => {
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
-  // Reset state when question changes (if we had multiple questions)
   useEffect(() => {
-    // In a real app, we'd reset here if the question prop changed
-    // setSelectedOptionId(null);
-    // setIsSubmitted(false);
+    setSelectedOptionId(null);
+    setIsSubmitted(false);
   }, [question.id]);
 
   const handleSelect = (id: string) => {
@@ -32,30 +32,37 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
   };
 
   const handleNext = () => {
-    // Logic for next question would go here
-    alert("Next question clicked");
+    if (hasNextQuestion) {
+      onNext();
+    }
   };
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isSubmitted) {
-        if (e.key === 'Enter') handleNext();
+        if (e.key === 'Enter' && hasNextQuestion) {
+          handleNext();
+        }
         return;
       }
 
-      switch (e.key) {
-        case '1': handleSelect(question.options[0].id); break;
-        case '2': handleSelect(question.options[1].id); break;
-        case '3': handleSelect(question.options[2].id); break;
-        case '4': handleSelect(question.options[3].id); break;
-        case 'Enter': handleSubmit(); break;
+      if (/^[1-9]$/.test(e.key)) {
+        const optionIndex = Number(e.key) - 1;
+        const option = question.options[optionIndex];
+        if (option) {
+          handleSelect(option.id);
+        }
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        handleSubmit();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSubmitted, selectedOptionId, question.options]);
+  }, [hasNextQuestion, isSubmitted, question.options, selectedOptionId]);
 
   return (
     <div className="w-full max-w-4xl mx-auto">
@@ -120,9 +127,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
                 </button>
                 <button 
                   onClick={handleNext}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all transform active:scale-95"
+                  disabled={!hasNextQuestion}
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold transition-all transform active:scale-95 ${
+                    hasNextQuestion
+                      ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  }`}
                 >
-                  Next Question
+                  {hasNextQuestion ? 'Next Question' : 'End of Quiz'}
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </>

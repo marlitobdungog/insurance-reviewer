@@ -43,9 +43,9 @@ export const AgentDashboardPage: React.FC = () => {
 
         <DashboardCard
           icon={<ClipboardCheck className="text-orange-600" />}
-          title="Continue Quiz"
-          description="Jump into the question review screen and continue where you left off."
-          actionLabel="Go to Quiz"
+          title="Review"
+          description="Open the review screen to work through insurance questions and check the explanations."
+          actionLabel="Start Review"
           onClick={() => navigate('/quiz')}
         />
 

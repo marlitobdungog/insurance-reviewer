@@ -111,7 +111,7 @@ export const OptionItem: React.FC<OptionItemProps> = ({
 
       {/* Feedback / Explanation Box */}
       <AnimatePresence>
-        {isSubmitted && (
+        {isSubmitted && (option.isCorrect || isSelected) && (
           <motion.div 
             initial={{ opacity: 0, height: 0, y: -10 }}
             animate={{ opacity: 1, height: 'auto', y: 0 }}

@@ -4,29 +4,42 @@ import { QuestionCard } from '../components/QuestionCard';
 import type { Question } from '../data/questions';
 
 export const QuizPage: React.FC = () => {
-  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchQuestion = async () => {
+    const fetchQuestions = async () => {
       try {
-        const response = await fetch('/api/questions/15');
+        const response = await fetch('/api/questions');
         if (!response.ok) {
-          throw new Error('Failed to fetch question');
+          throw new Error('Failed to fetch questions');
         }
         const data = await response.json();
-        setCurrentQuestion(data);
+        const nextQuestions = Array.isArray(data.questions) ? data.questions : [];
+
+        if (nextQuestions.length === 0) {
+          throw new Error('No questions available');
+        }
+
+        setQuestions(nextQuestions);
+        setCurrentIndex(0);
       } catch (err) {
-        setError('Failed to load question');
+        setError(err instanceof Error ? err.message : 'Failed to load questions');
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchQuestion();
+    fetchQuestions();
   }, []);
+
+  const currentQuestion = questions[currentIndex] ?? null;
+  const handleNextQuestion = () => {
+    setCurrentIndex((current) => Math.min(current + 1, questions.length - 1));
+  };
 
   if (loading) {
     return (
@@ -52,13 +65,17 @@ export const QuizPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F8F9FC] font-sans pb-20">
       <Header 
-        currentQuestion={currentQuestion.id} 
-        totalQuestions={100} 
+        currentQuestion={currentIndex + 1} 
+        totalQuestions={questions.length} 
         domain={currentQuestion.domain} 
       />
       
       <main className="pt-12 px-4">
-        <QuestionCard question={currentQuestion} />
+        <QuestionCard
+          question={currentQuestion}
+          onNext={handleNextQuestion}
+          hasNextQuestion={currentIndex < questions.length - 1}
+        />
       </main>
     </div>
   );
