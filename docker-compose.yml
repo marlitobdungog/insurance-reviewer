@@ -1,0 +1,54 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: insurance-reviewer-web
+    ports:
+      - "3100:3000"
+    environment:
+      - NODE_ENV=development
+      - VITE_API_PROXY_TARGET=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_started
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: insurance-reviewer-backend
+    ports:
+      - "5100:8000"
+    environment:
+      - MONGODB_URI=mongodb://root:example@mongodb:27017/insurance_reviewer?authSource=admin
+      - MONGODB_DB=insurance_reviewer
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27018:27017"
+    container_name: insurance-reviewer-mongodb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=example
+      - MONGO_INITDB_DATABASE=insurance_reviewer
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:

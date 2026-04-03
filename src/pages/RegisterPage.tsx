@@ -1,10 +1,62 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export const RegisterPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+    setError('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Registration failed');
+        return;
+      }
+
+      setSuccess('Account created successfully! Redirecting...');
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+    } catch (err) {
+      setError('Network error. Make sure the API server is running.');
+      console.error('Register error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] font-sans">
@@ -31,12 +83,28 @@ export const RegisterPage: React.FC = () => {
           </p>
         </div>
 
-        <form className="space-y-6">
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+            {success}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Full Name</label>
             <input 
-              type="text" 
+              type="text"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
               placeholder="John Doe"
+              required
               className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-slate-600 placeholder:text-slate-400"
             />
           </div>
@@ -44,8 +112,12 @@ export const RegisterPage: React.FC = () => {
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">Email Address</label>
             <input 
-              type="email" 
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
               placeholder="name@agency.com"
+              required
               className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-slate-600 placeholder:text-slate-400"
             />
           </div>
@@ -55,7 +127,11 @@ export const RegisterPage: React.FC = () => {
             <div className="relative">
               <input 
                 type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
                 placeholder="Create a strong password"
+                required
                 className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-slate-600 placeholder:text-slate-400 pr-12"
               />
               <button 
@@ -73,7 +149,11 @@ export const RegisterPage: React.FC = () => {
             <div className="relative">
               <input 
                 type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
                 placeholder="Repeat your password"
+                required
                 className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-slate-600 placeholder:text-slate-400 pr-12"
               />
               <button 
@@ -86,8 +166,12 @@ export const RegisterPage: React.FC = () => {
             </div>
           </div>
 
-          <button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-600/20 transition-all transform active:scale-[0.99] text-lg mt-4">
-            Create Free Account
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-600/20 transition-all transform active:scale-[0.99] text-lg mt-4"
+          >
+            {loading ? 'Creating Account...' : 'Create Free Account'}
           </button>
         </form>
 

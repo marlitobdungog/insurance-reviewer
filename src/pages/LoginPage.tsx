@@ -1,15 +1,43 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, ArrowRight, Shield, Building2, Landmark } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, we would validate credentials here
-    navigate('/dashboard');
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Login failed');
+        return;
+      }
+
+      setUser(data.user);
+      navigate('/dashboard');
+    } catch (err) {
+      setError('Network error. Make sure the API server is running.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -42,12 +70,21 @@ export const LoginPage: React.FC = () => {
             <p className="text-slate-500">Sign in to continue your license practice</p>
           </div>
 
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">Email Address</label>
               <input 
-                type="email" 
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
                 placeholder="e.g. agent@insurance.com"
+                required
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-slate-600 placeholder:text-slate-400"
               />
             </div>
@@ -60,7 +97,10 @@ export const LoginPage: React.FC = () => {
               <div className="relative">
                 <input 
                   type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
                   placeholder="Enter your password"
+                  required
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all text-slate-600 placeholder:text-slate-400 pr-12"
                 />
                 <button 
@@ -84,9 +124,9 @@ export const LoginPage: React.FC = () => {
               </label>
             </div>
 
-            <button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-orange-600/20 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
-              Sign In
-              <ArrowRight size={20} />
+            <button type="submit" disabled={loading} className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl shadow-lg shadow-orange-600/20 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
+              {loading ? 'Signing In...' : 'Sign In'}
+              {!loading && <ArrowRight size={20} />}
             </button>
           </form>
 
